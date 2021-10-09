@@ -1,7 +1,7 @@
 import { Sequelize } from "sequelize"
 
 const sequelize = new Sequelize(
-    'users', // DATABASE NAME
+    '', // DATABASE NAME
     'root', // USER
     '', {   // PASSWORD
         dialect: 'mysql',

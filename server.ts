@@ -1,36 +1,67 @@
 import express, { Request, Response, Application } from 'express'
 const app: Application = express()
+const { graphqlHTTP } = require('express-graphql')
+const { buildSchema } = require('graphql')
 const PORT = process.env.PORT || 8080
+
 import User from "./models/User";
 import sequelize  from './utils/database'
 
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
 sequelize.sync()
 
-app.get('/', async(req: Request, res: Response) => {
-    res.status(200).json({ message: 'Hello from the server' })
-})
+const schema = buildSchema(`
+    type Query {
+        message: String
+        users: [User]
+        addUser: String
+    }
 
-// GET ALL USERS
-app.get('/api/users', async(req: Request, res: Response) => {
+    type User {
+        id: Int,
+        name: String,
+        age: Int,
+        email: String
+    }
+
+    type Mutation {
+        addUser(name: String!, age: Int!, email: String!): User
+    }
+`)
+
+// GET ALL USERS FROM THE DB
+const getUsers = async() => {
     const users = await User.findAll()
-    res.status(200).send(users)
-})
+    return users
+}
 
-// POST A NEW USER
-app.post('/api/users', (req: Request, res: Response) => {
-    const { name, age, email } = req.body
-    User.create({
-        name,
-        age,
-        email
+interface USER {
+    id: number,
+    name: string,
+    age: number,
+    email: string
+}
+
+// ADD NEW USER TO THE DB
+const addUser = async(args: USER): Promise<void> => {
+    await User.create({
+        name: args.name,
+        age: args.age,
+        email: args.email
     })
-     .then(() => res.send('User data inserted successfully'))
-     .catch((err: void) => console.log(err))
-})
+}
+
+const rootValue = {
+    message: () => 'Hello world!',
+    users: getUsers,
+    addUser: addUser
+}
+
+app.use('/graphql', graphqlHTTP({
+    schema,
+    rootValue,
+    graphiql: true
+}))
 
 app.listen(PORT, ():void => {
     console.log(`Server listening to PORT ${PORT}...`)
